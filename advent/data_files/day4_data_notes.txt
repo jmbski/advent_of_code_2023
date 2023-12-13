@@ -1,0 +1,19 @@
+#Card counts - 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1
+# original cards count as base, so min count of N cards will be N
+
+Card 1: 41 48 83 86 17 | 83 86  6 31 17  9 48 53    # wins 4 (48, 83, 86, 17)
+                                                    # copy of cards: 2, 3, 4, 5
+#Card counts - 1: 1, 2: 2, 3: 2, 4: 2, 5: 2, 6: 1                                                    
+Card 2: 13 32 20 16 61 | 61 30 68 82 17 32 24 19    # O2 wins 2 (32, 61), so O2 and C2 win
+                                                    # thus giving 2 copies each of 3 + 4
+#Card counts - 1: 1, 2: 2, 3: 4, 4: 4, 5: 2, 6: 1                                                    
+
+Card 3:  1 21 53 59 44 | 69 82 63 72 16 21 14  1    # O3 wins 2 (C4+1, C5+1) * 4 = (C4+4, C5+4)
+#Card counts - 1: 1, 2: 2, 3: 4, 4: 8, 5: 6, 6: 1
+
+Card 4: 41 92 73 84 69 | 59 84 76 51 58  5 54 83    # O4 wins 1 (C5+1) * 8 = (C5 + 8) = 14
+#Card counts - 1: 1, 2: 2, 3: 4, 4: 8, 5: 14, 6: 1
+
+Card 5: 87 83 26 28 32 | 88 30 70 12 93 22 82 36    # O5 wins 0, no extra, (process ends?)
+Total = 1, 3, 7, 15,29, 30
+Card 6: 31 18 13 56 72 | 74 77 10 23 35 67 36 11
