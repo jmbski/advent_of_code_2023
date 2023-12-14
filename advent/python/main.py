@@ -826,8 +826,88 @@ def map_outputs(prev_ranges: list[dict], new_ranges: list[dict]):
 
     return new_ranges
 
-def get_map_output(value: int, ranges: list[dict]):
-    pass
+def check_range_values(prev_start: int, prev_end: int, next_start: int, next_end: int):
+    if((next_start <= next_end or next_end < 0) and (prev_start <= prev_end or prev_end < 0)):
+        return True
+    return False
+
+def get_map_output(range_a: list[dict], range_b: list[dict]):
+    prev_range = sorted(range_a, key=lambda x: x.get('output_start'))
+    next_range = sorted(range_b, key=lambda x: x.get('input_start'))
+
+    new_ranges = []
+
+    p_range = prev_range[0]
+    prev_start = p_range.get('output_start')
+    prev_end = p_range.get('output_end')
+
+    n_range = next_range[0]
+    next_start = n_range.get('input_start')
+    next_end = n_range.get('input_end')
+
+    p_index = 0
+    n_index = 0
+    n_index_old = n_index
+    p_index_old = p_index
+
+    while( p_index < len(prev_range) and n_index < len(next_range)):
+
+        if(p_index != p_index_old):
+            p_range = prev_range[p_index]
+            prev_start = p_range.get('output_start')
+            prev_end = p_range.get('output_end')
+            p_index_old = p_index
+
+        cur_end = prev_end
+
+        if(n_index != n_index_old):
+            n_range = next_range[n_index]
+            next_start = n_range.get('input_start')
+            next_end = n_range.get('input_end')
+            n_index_old = n_index
+
+        while(n_index < len(next_range) and check_range_values(prev_start, prev_end, next_start, next_end)):
+        
+            if(is_within(prev_start, next_start, next_end)): # 0 within 0-14, true
+                cur_end = min(cur_end, next_end) # 14
+                # new range = output_start out(0) in(0) count(15)
+                output_start = get_range_output(n_range, next_start)
+                input_start = get_range_input(p_range, prev_start)
+                new_ranges.append(build_range(output_start, input_start, cur_end - prev_start + 1))
+                next_start = cur_end + 1
+                prev_start = next_start 
+
+            elif(next_end < 0 and prev_end >= 0):
+                input_start = get_range_input(p_range, prev_start)
+                output_start = get_range_input(n_range, next_start)
+                count = prev_end - prev_start + 1
+                new_ranges.append(build_range(output_start, input_start, count))
+                next_start = cur_end + 1
+                prev_start = next_start
+
+            elif(prev_end < 0 and next_end >= 0):
+                input_start = get_range_input(p_range, prev_start)
+                output_start = get_range_output(n_range, next_start)
+                count = next_end - next_start + 1
+                new_ranges.append(build_range(output_start, input_start, count))
+                next_start = cur_end + 1
+                prev_start = next_start
+
+            elif(prev_end < 0 and next_end < 0):
+                input_start = get_range_input(p_range, prev_start)
+                output_start = get_range_output(n_range, next_start)
+                new_ranges.append(build_range(output_start, input_start, -1))
+                next_start = cur_end + 1
+                prev_start = next_start
+
+            if(next_start > next_end):
+                n_index += 1
+
+        if(prev_start > prev_end):
+            p_index += 1
+            
+    return new_ranges
+
 
 def construct_full_map(maps: list[dict]):
     full_map = [] # maybe dict instead? idk
@@ -843,7 +923,7 @@ def construct_full_map(maps: list[dict]):
         
         ranges.sort(key=lambda x: x.get('input_start'))
         if(prev_ranges is not None):
-            ranges = map_outputs(prev_ranges, ranges)
+            ranges = get_map_output(prev_ranges, ranges)
             
             print(f'\nMap: {name}')
             ranges.sort(key=lambda x: x.get('input_start'))
