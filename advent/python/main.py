@@ -752,7 +752,8 @@ def get_input_gaps(ranges: list[dict]):
 
         cur_start = val_range.get('input_end') + 1
 
-    gap_ranges.append(build_range(cur_start, cur_start, -1))
+    if(cur_start != 0):
+        gap_ranges.append(build_range(cur_start, cur_start, -1))
     
     return gap_ranges
 
@@ -868,7 +869,7 @@ def get_map_output(range_a: list[dict], range_b: list[dict]):
 
         while(n_index < len(next_range) and check_range_values(prev_start, prev_end, next_start, next_end)):
         
-            if(is_within(prev_start, next_start, next_end)): # 0 within 0-14, true
+            if(is_within(prev_start, next_start, next_end) and prev_end >= 0 and next_end >= 0): # 0 within 0-14, true
                 cur_end = min(cur_end, next_end) # 14
                 # new range = output_start out(0) in(0) count(15)
                 output_start = get_range_output(n_range, next_start)
@@ -877,7 +878,7 @@ def get_map_output(range_a: list[dict], range_b: list[dict]):
                 next_start = cur_end + 1
                 prev_start = next_start 
 
-            elif(next_end < 0 and prev_end >= 0):
+            if(next_end < 0 and prev_end >= 0):
                 input_start = get_range_input(p_range, prev_start)
                 output_start = get_range_input(n_range, next_start)
                 count = prev_end - prev_start + 1
@@ -885,7 +886,7 @@ def get_map_output(range_a: list[dict], range_b: list[dict]):
                 next_start = cur_end + 1
                 prev_start = next_start
 
-            elif(prev_end < 0 and next_end >= 0):
+            if(prev_end < 0 and next_end >= 0):
                 input_start = get_range_input(p_range, prev_start)
                 output_start = get_range_output(n_range, next_start)
                 count = next_end - next_start + 1
@@ -893,7 +894,7 @@ def get_map_output(range_a: list[dict], range_b: list[dict]):
                 next_start = cur_end + 1
                 prev_start = next_start
 
-            elif(prev_end < 0 and next_end < 0):
+            if(prev_end < 0 and next_end < 0):
                 input_start = get_range_input(p_range, prev_start)
                 output_start = get_range_output(n_range, next_start)
                 new_ranges.append(build_range(output_start, input_start, -1))
@@ -905,7 +906,10 @@ def get_map_output(range_a: list[dict], range_b: list[dict]):
 
         if(prev_start > prev_end):
             p_index += 1
-            
+    
+    if(last(prev_range) not in new_ranges):
+        new_ranges.append(last(prev_range))
+
     return new_ranges
 
 
@@ -922,20 +926,198 @@ def construct_full_map(maps: list[dict]):
         name = val_map.get('name')
         
         ranges.sort(key=lambda x: x.get('input_start'))
+        print(f'\nMap: {name}')
         if(prev_ranges is not None):
             ranges = get_map_output(prev_ranges, ranges)
             
-            print(f'\nMap: {name}')
-            ranges.sort(key=lambda x: x.get('input_start'))
-            pretty_print(ranges)
-            new_gaps = get_input_gaps(ranges)
+            #ranges.sort(key=lambda x: x.get('input_start'))
+            """ pretty_print(ranges) """
+            """ new_gaps = get_input_gaps(ranges) """
             # figure out how to remap
 
 
         prev_ranges = ranges
 
-    ranges.sort(key=lambda x: x.get('input_start'))
-    print('\nFinal:')
-    pretty_print(ranges)
+    ranges.sort(key=lambda x: x.get('output_start'))
+    return ranges
 
-day5_pt2()
+def pause(output):
+    print(output)
+    resume = input()
+    if(resume == 'x'):
+        exit()
+
+def day5_pt2_2():
+    lines = retrieve_day_lines(5)
+
+    all_converters: list[list[tuple]] = []
+
+    seed_ranges = []
+
+    name = ''
+
+    converter_set: list[tuple] = []
+
+    for line in lines:
+        line = line.strip()
+        if(line.startswith('seeds:')):
+            seed_strs = line.split(':')[1].strip()
+            seed_strs_split = seed_strs.split()
+            for i in range(0, len(seed_strs_split), 2):
+                start = int(seed_strs_split[i].strip())
+                count = int(seed_strs_split[i+1].strip())
+                end = start + count - 1
+
+                seed_ranges.append([(start, end)])
+
+        else:
+            if(':' in line):
+                name = line.replace(':','')
+            elif(line != ''):
+                map_num_strs = line.split()
+                map_nums = list(map(lambda x: int(x), map_num_strs))
+
+                output_start, input_start, count = map_nums
+                input_end = input_start + count - 1
+
+                offset = output_start - input_start
+
+                converter_set.append((input_start, input_end, offset))
+            elif(line == '' and len(converter_set) > 0):
+                converter_set.sort(key=lambda x: x[0])
+                all_converters.append(converter_set)
+                converter_set = []
+
+    converters_with_gaps = []
+    current_start = 0
+
+    for converter_set in all_converters:
+        new_converter_set = []
+
+        for converter in converter_set:
+            start = converter[0]
+            end = converter[1]
+            
+            if(start > current_start):
+                new_converter_set.append((current_start, start - 1, 0))
+                new_converter_set.append(converter)
+                current_start = end + 1
+            else:
+                new_converter_set.append(converter)
+                current_start = end + 1
+        new_converter_set.append((current_start, -1, 0))
+        current_start = 0
+        new_converter_set.sort(key=lambda x: x[0])
+
+        converters_with_gaps.append(new_converter_set)
+    
+    previous_converter_set = converters_with_gaps[0]
+    previous_converter_set.sort(key=lambda x: x[0] + x[2])
+    print(previous_converter_set)
+
+    for converter_set in converters_with_gaps[1:]:
+        new_converter_set = []
+    
+        origin_start = 0
+        origin_end = 0
+        origin_offset = 0
+        org_output_start = 0
+        org_output_end = 0
+        next_start = 0
+        next_end = 0
+        next_offset = 0
+
+        
+        next_index = 0
+        current_index = 0
+        next_converter = converter_set[next_index]
+        
+        next_start, next_end, next_offset = next_converter
+
+        for converter in previous_converter_set:
+            origin_start, origin_end, origin_offset = converter
+            org_output_start = origin_start + origin_offset
+            org_output_end = origin_end + origin_offset
+
+            new_end = origin_end
+
+            # 
+            #(0,49,0) => (0, 14, 39), (0,14,39) <=> (11,52,-11)
+            # o_out_start = 39, n_in_start = 11, new = 39
+            # o_out_end = 53, n_in_end = 52, new = 52
+            # o_offset = 39, n_offset = -11, new = 28
+            # o_out_start = new_end + 1, = 53
+            # new = (0, 14, 28)
+            # >> get next converter (53,60,-4)
+            # o_out_start = 53, n_in_start 53, new = 53
+            # o_out_end = 53, n_in_end = 60, new = 53
+            # o_offset = 39, n_offset = -4, new = 35
+            # new = (14, 14, 35)
+            # >> get next original converter 
+
+            while(next_index < len(converter_set)):
+                if(org_output_start >= next_start and org_output_start <= next_end):
+                    new_start = max(org_output_start, next_start) - origin_offset
+                    new_end = min(org_output_end, next_end) - origin_offset
+                    new_offset = origin_offset + next_offset
+
+                    new_converter = (new_start, new_end, new_offset)
+                    new_converter_set.append(new_converter)
+
+                    next_start = new_end + 1 + origin_offset
+                    org_output_start = next_start
+                elif(next_end < 0 and org_output_end >= 0):
+                    new_start = org_output_start - origin_offset
+                    new_end = org_output_end - origin_offset
+                    new_offset = origin_offset
+                    new_converter = (new_start, new_end, new_offset)
+                    org_output_start = org_output_end + 1
+                    new_converter_set.append(new_converter)
+                elif(next_end < 0 and org_output_end < 0):
+                    new_start = org_output_start - origin_offset
+                    new_end = -1
+                    new_offset = 0
+
+                    new_converter = (new_start, new_end, new_offset)
+                    new_converter_set.append(new_converter)
+
+                if(next_end < 0 or org_output_end < 0):
+                    print(next_end, org_output_end)
+                
+                # handle unbounded ends
+                if(next_end >= 0 and next_start > next_end):
+                    next_index += 1
+                    if(next_index < len(converter_set)):
+                        next_converter = converter_set[next_index]
+                        next_start, next_end, next_offset = next_converter
+                if(org_output_start > org_output_end):
+
+                    break
+            
+
+        new_converter_set.sort(key=lambda x: x[0] + x[2])
+        previous_converter_set = new_converter_set
+
+    print('final:\n')
+    input_sort = sorted(previous_converter_set, key=lambda x: x[0])
+    output_sort_asc = sorted(previous_converter_set, key=lambda x: x[0] + x[2])
+
+    
+    pretty_print(output_sort_asc)
+
+    #pretty_print(all_converters)
+
+def get_final_outputs(converters: list[list[tuple]]):
+    final_outputs = []
+    prev_converter_set = None
+    current_input = 0
+
+    for converter_set in converters:
+        pass
+
+"""
+    95/100 = 2/x
+    95x = 200
+    x = 200/95
+"""
+day5_pt2_2()
