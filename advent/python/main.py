@@ -1,10 +1,14 @@
 import json, re, os
-from tqdm import tqdm
 
 
 global_counter = {
     'count': 0
 }
+
+def retrieve_day_lines(day: int = 4) -> list[str]:
+    path = f'./data_files/day{day}_data.txt'
+    reader = open(path, 'r')
+    return reader.readlines()
 
 def count():
     global_counter['count'] += 1
@@ -123,6 +127,7 @@ def get_line_digits(line: str) -> list[int]:
     if(isinstance(line, str)):
         # regex: [] to group them individually, \d to match on numbers
         pattern = r'(?=([\d]|one|two|three|four|five|six|seven|eight|nine))'
+        #pattern = r'([\d])'
         
         str_digits = re.findall(pattern, line)
 
@@ -147,7 +152,7 @@ def retrieve_lines(path: str) -> list[str]:
             return reader.readlines()
     return []
     
-def sum_file_line_ints(path: str) -> int:
+def sum_file_line_ints() -> int:
     """ Reads a file line by line, combines the digits on each and sums the number from each line
 
     Args:
@@ -157,15 +162,10 @@ def sum_file_line_ints(path: str) -> int:
         int: sum total of all line number values
     """
 
-    lines = retrieve_lines(path)
+    lines = retrieve_day_lines(1)
     
     line_nums = list(map(lambda x: combine_ints(*get_line_digits(x)), lines))
-
-    total = 0
-    for num in line_nums:
-        if '0' in str(num):
-            total += 1
-    print(total)
+    
     return sum(line_nums)
 
 """ Day 2 """
@@ -245,11 +245,10 @@ def parse_day2_data(lines: list[str]):
             power_total += game.power
     return id_total, power_total
 
-def day_2(path: str):
-    if(isinstance(path, str) and os.path.exists(path)):
-        lines = retrieve_lines(path)
-        valid_sum, power_sum = parse_day2_data(lines)
-        print(f'valid_sum: {valid_sum}, power_sum: {power_sum}')
+def day_2():
+    lines = retrieve_day_lines(2)
+    valid_sum, power_sum = parse_day2_data(lines)
+    print(f'valid_sum: {valid_sum}, power_sum: {power_sum}')
 
 """ Day 3 """
 grid = []
@@ -364,6 +363,7 @@ def check_adjacent(x: int, y: int):
         y2 = cell[1] + y
         adj_cell = get_cell(x2, y2)
         if(adj_cell is not None and not is_numeric(adj_cell) and adj_cell != '.'):
+            adjacent = True
             is_gear = adj_cell == '*'
             if(is_gear):
                 gears.append([x2,y2])
@@ -373,6 +373,7 @@ def check_adjacent(x: int, y: int):
 
 def day_3():
     path = './data_files/day3_data.txt'
+    print(os.getcwd())
     lines = retrieve_lines(path)
     build_grid(lines)
     valid_parts, gear_power = get_numbers()
@@ -381,10 +382,6 @@ def day_3():
     print(f'pt1_answer: {pt1_answer}, gear_power: {gear_power}')
 
 """ Day 4 """
-def retrieve_day_lines(day: int = 4) -> list[str]:
-    path = f'./data_files/day{day}_data.txt'
-    reader = open(path, 'r')
-    return reader.readlines()
 
 def day_4():
     lines = retrieve_day_lines()
@@ -394,6 +391,7 @@ def day_4():
         total_points += get_winning_score(winning_nums, your_nums)
 
     print(total_points)
+
     
 def parse_cards(card: str):
     card_split = card.split(':')
@@ -425,7 +423,7 @@ def get_winning_score(winning_nums, your_nums):
                 points *= 2
     
     return points
-        
+      
 def day_4_pt2():
     lines = retrieve_day_lines()
     card_counts = []
@@ -462,6 +460,7 @@ def get_card_wins(line: str) -> int:
             matches += 1
 
     return matches
+
 
 """ Day 5 """
 def is_within(value, minimum, maximum, inclusive: bool = True) -> bool:
@@ -954,6 +953,8 @@ def day5_pt2_2():
 
     seed_ranges = []
 
+    seed_values = []
+
     name = ''
 
     converter_set: list[tuple] = []
@@ -966,9 +967,10 @@ def day5_pt2_2():
             for i in range(0, len(seed_strs_split), 2):
                 start = int(seed_strs_split[i].strip())
                 count = int(seed_strs_split[i+1].strip())
+                seed_values.extend([start, count])
                 end = start + count - 1
 
-                seed_ranges.append([(start, end)])
+                seed_ranges.append((start, end))
 
         else:
             if(':' in line):
@@ -988,11 +990,17 @@ def day5_pt2_2():
                 all_converters.append(converter_set)
                 converter_set = []
 
+    if(converter_set not in all_converters):
+        converter_set.sort(key=lambda x: x[0])
+        all_converters.append(converter_set)
+
     converters_with_gaps = []
     current_start = 0
 
     for converter_set in all_converters:
         new_converter_set = []
+        if(converter_set == last(all_converters)):
+            print('last')
 
         for converter in converter_set:
             start = converter[0]
@@ -1081,8 +1089,8 @@ def day5_pt2_2():
                     new_converter = (new_start, new_end, new_offset)
                     new_converter_set.append(new_converter)
 
-                if(next_end < 0 or org_output_end < 0):
-                    print(next_end, org_output_end)
+                """ if(next_end < 0 or org_output_end < 0):
+                    print(next_end, org_output_end) """
                 
                 # handle unbounded ends
                 if(next_end >= 0 and next_start > next_end):
@@ -1102,10 +1110,42 @@ def day5_pt2_2():
     input_sort = sorted(previous_converter_set, key=lambda x: x[0])
     output_sort_asc = sorted(previous_converter_set, key=lambda x: x[0] + x[2])
 
+    final_values = []
+    #pt 1
     
-    pretty_print(output_sort_asc)
+    pt1_values = []
+    for start in seed_values:
+        for converter in input_sort:
+            in_start, in_end, offset = converter
+            if(is_within(start, in_start, in_end)):
+                max_lower = max(in_start, start)
+                pt1_values.append(start + offset)
+                #start = min(end, in_end) + 1
+            if(start >= in_start and in_end < 0):
+                pt1_values.append(start)
+
+    print('pt1 min:', min(pt1_values))
+
+    for seed_range in seed_ranges:
+        start, end = seed_range
+        while(start <= end):
+            for converter in input_sort:
+                in_start, in_end, offset = converter
+                if(is_within(start, in_start, in_end)):
+                    max_lower = max(in_start, start)
+                    final_values.append(max_lower + offset)
+                    start = min(end, in_end) + 1
+                if(start >= in_start and in_end < 0):
+                    final_values.append(start)
+
+    min_value = min(final_values)
+    print(min_value)
+    
+    #pretty_print(output_sort_asc)
 
     #pretty_print(all_converters)
+
+
 
 def get_final_outputs(converters: list[list[tuple]]):
     final_outputs = []
